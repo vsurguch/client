@@ -1,8 +1,9 @@
 import queue
 import socket
 import threading as th
-import sky_client.utils.encryption as encryption
-import sky_client.utils.message as msg
+import utils.encryption as encryption
+import utils.message2 as msg
+from utils.conf import get_path
 
 # import utils.encryption as encryption
 # import utils.message as msg
@@ -22,7 +23,21 @@ class MessageReceiver(th.Thread):
         while not self.stop:
             try:
                 #вставить Lock
-                data = self.socket.recv(1024)
+                bl = self.socket.recv(4)
+                leng = int.from_bytes(bl, 'big')
+                print(leng)
+                data = b''
+
+                while leng != 0:
+                    to_read = 4096 if leng > 4096 else leng
+                    data += self.socket.recv(to_read)
+                    leng -= to_read
+                print(len(data))
+
+                # while leng > 4096:
+                #     data += self.socket.recv(4096)
+                #     leng -= 4096
+                # data += self.socket.recv(leng)
                 if not data:
                     break
                 else:
@@ -40,13 +55,15 @@ class MessageSender(th.Thread):
         self.send_queue = queue.Queue()
         self.stop = False
 
-
     def run(self):
         while not self.stop:
             if self.send_queue.not_empty:
                 message = self.send_queue.get()
                 # вставить Lock
-                self.socket.sendall(message)
+                l = len(message)
+                bl = l.to_bytes(4, 'big')
+                self.socket.sendall(bl + message)
+
 
 class Client:
     # инициализация клиента
@@ -60,7 +77,6 @@ class Client:
     # соединение с сервером, encryption, запуск получателя и отправителя сообщений в потоках
     def run(self, username='', password=''):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
         #conn
         try:
             self.socket.connect(self.server_address)
@@ -80,17 +96,20 @@ class Client:
         self.sender_thread.start()
 
         self.session_key = b'Sixteen byte key'
-        session_key_encrypted = encryption.generate_session_key(self.cipher_rsa, self.session_key)
+        self.session_key_encrypted = encryption.generate_session_key(self.cipher_rsa, self.session_key)
 
-        auth_message = msg.MessageAuthenticate(username, password)
+    def send_auth_data(self, auth_message):
         auth_bmessage = auth_message.get_binary_json('utf-8')
-        auth_message_encrypted = encryption.encrypt(encryption.padding_text(auth_bmessage), self.session_key)
-        self.sender_thread.send_queue.put(session_key_encrypted + auth_message_encrypted)
+        auth_message_encrypted = encryption.encrypt(auth_bmessage, self.session_key)
+        self.sender_thread.send_queue.put(self.session_key_encrypted + auth_message_encrypted)
 
     def send(self, message):
         bmessage = message.get_binary_json('utf-8')
-        encrypted_message = encryption.encrypt(encryption.padding_text(bmessage), self.session_key)
+        encrypted_message = encryption.encrypt(bmessage, self.session_key)
         self.sender_thread.send_queue.put(encrypted_message)
+
+    def send_file(self, encrypted_data):
+        self.sender_thread.send_queue.put(encrypted_data)
 
     # разрыв соединения
     def disconnect(self):
@@ -100,11 +119,18 @@ class Client:
         self.session_key_recieved_by_server=False
 
     def new_message(self):
-        encrypted_message = self.reciever_thread.recieved_queue.get()
-        bmessage = encryption.decrypt(encrypted_message, self.session_key)
-        message = msg.GeneralMessage()
-        message.make_from_binary_json(bmessage, 'utf-8')
-        self.listener.new_message(message)
+        encrypted_data = self.reciever_thread.recieved_queue.get()
+        print(len(encrypted_data))
+        if self.listener.waiting_file_flag:
+            print(self.listener.file_data.name)
+            file_path = get_path(self.listener.file_data.name)
+            encryption.decrypt_file(encrypted_data, self.session_key, file_path)
+            self.listener.new_file_recieved(file_path)
+        else:
+            bmessage = encryption.decrypt(encrypted_data, self.session_key)
+            message = msg.GeneralMessage()
+            message.make_from_binary_json(bmessage, 'utf-8')
+            self.listener.new_message(message)
 
 
 

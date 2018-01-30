@@ -28,13 +28,16 @@ class Message(DeclarativeBase):
     text = sql.Column('text', sql.String)
     time = sql.Column('time', sql.DateTime)
     reply = sql.Column('reply', sql.Boolean)
+    file = sql.Column('file', sql.String)
     contact_id = sql.Column('user_id', sql.Integer, sql.ForeignKey('Contacts.id'))
+
     # contact = orm.relationship(Contact, backref=orm.backref('messages', uselist=True))
 
-    def __init__(self, message_text, message_time, reply=False):
+    def __init__(self, message_text, message_time, file='', reply=False):
         self.text = message_text
         self.time = message_time
         self.reply = reply
+        self.file = file
 
     def __repr__(self):
         return '<Message: {} ({})>'.format(self.text, self.time)
@@ -77,10 +80,10 @@ class ClientDatabase(object):
             session.delete(contact)
             session.commit()
 
-    def add_message(self, session, contact_name, message_text, message_time, reply):
+    def add_message(self, session, contact_name, message_text, message_time, filename, reply):
         contact = session.query(Contact).filter_by(name=contact_name).first()
         if contact is not None:
-            message = Message(message_text, message_time, reply)
+            message = Message(message_text, message_time, file=filename, reply=reply)
             contact.messages.append(message)
             session.commit()
 

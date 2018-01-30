@@ -53,14 +53,9 @@ def read_conf():
     else:
         return read_conf_file(conf_file)
 
-def main():
-    print(conf_file_path())
-    save_conf(key1="value1", key2="value2")
-    d = read_conf()
-    print(d)
+def get_path(filename=''):
+    return join(CONF_DIR, filename)
 
-if __name__ == '__main__':
-    main()
 
 
 
