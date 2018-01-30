@@ -5,14 +5,13 @@ from PyQt5.QtGui import QStandardItem, QStandardItemModel, QIcon, QBrush, QColor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QModelIndex, Qt, QObject
 import datetime
 from pathlib import Path
-from time import sleep
 
 # import sky_client.client as client
-# import sky_client.utils.contactlist as clst, sky_client.utils.message as msg
+# import sky_client.utils.contactlist as clst, sky_client.utils.message2 as msg
+# import sky_client.utils.encryption as encryption
 # import sky_client.database.database_client as dbc
 # import sky_client.utils.conf as conf
 
-from utils import singleton
 import client as client
 import utils.contactlist as clst, utils.message2 as msg
 import utils.encryption as encryption

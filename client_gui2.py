@@ -11,6 +11,9 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, QModelIndex, Qt, QMimeData, QSize
 from client_controller import StandardItemModelContacts, StandardItemModelMessages, ClientModel, ClientController
 from utils import conf
 
+# from sky_client.client_controller import StandardItemModelContacts, StandardItemModelMessages, ClientModel, ClientController
+# from sky_client.utils import conf
+
 PATH_AUTHGUI = os.path.join(os.path.dirname(__file__), 'auth2.ui')
 
 class MessageField(QPlainTextEdit):

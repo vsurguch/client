@@ -5,9 +5,9 @@ import utils.encryption as encryption
 import utils.message2 as msg
 from utils.conf import get_path
 
-# import utils.encryption as encryption
-# import utils.message as msg
-
+# import sky_client.utils.encryption as encryption
+# import sky_client.utils.message2 as msg
+# from sky_client.utils.conf import get_path
 
 class MessageReceiver(th.Thread):
     def __init__(self, client, connection):
@@ -20,28 +20,30 @@ class MessageReceiver(th.Thread):
 
     def run(self):
         # self.socket.settimeout(0.2)
+        print('run')
         while not self.stop:
             try:
                 #вставить Lock
                 bl = self.socket.recv(4)
                 leng = int.from_bytes(bl, 'big')
-                print(leng)
-                data = b''
+                message = b''
+                left_to_read = leng
+                while left_to_read != 0:
+                    to_read = 4096 if left_to_read > 4096 else left_to_read
+                    data = self.socket.recv(to_read)
+                    message += data
+                    left_to_read -= len(data)
 
-                while leng != 0:
-                    to_read = 4096 if leng > 4096 else leng
-                    data += self.socket.recv(to_read)
-                    leng -= to_read
-                print(len(data))
+                print('message recieved ok') if leng == len(message) else print('incomplete message recived')
 
                 # while leng > 4096:
                 #     data += self.socket.recv(4096)
                 #     leng -= 4096
                 # data += self.socket.recv(leng)
-                if not data:
+                if not message:
                     break
                 else:
-                    self.recieved_queue.put(data)
+                    self.recieved_queue.put(message)
                     self.client.new_message()
             except:
                 pass
@@ -120,7 +122,6 @@ class Client:
 
     def new_message(self):
         encrypted_data = self.reciever_thread.recieved_queue.get()
-        print(len(encrypted_data))
         if self.listener.waiting_file_flag:
             print(self.listener.file_data.name)
             file_path = get_path(self.listener.file_data.name)
